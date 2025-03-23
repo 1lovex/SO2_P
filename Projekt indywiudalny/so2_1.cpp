@@ -32,18 +32,24 @@ void philosopher(int id, Mutex* chopsticks, int iterations = -1) {
 		Mutex& rightChopstick = chopsticks[(id + 1) % NUM_PHILOSOPHERS];
 
 		if (id % 2 == 0) {
+			printLog("Philosopher " + to_string(id) + " is picking up left chopstick (chopstick " + to_string(id) + ").");
 			leftChopstick.lock();
+			printLog("Philosopher " + to_string(id) + " is picking up right chopstick (chopstick " + to_string((id + 1) % NUM_PHILOSOPHERS) + ").");
 			rightChopstick.lock();
 		}
 		else {
+			printLog("Philosopher " + to_string(id) + " is picking up right chopstick (chopstick " + to_string((id + 1) % NUM_PHILOSOPHERS) + ").");
 			rightChopstick.lock();
+			printLog("Philosopher " + to_string(id) + " is picking up left chopstick (chopstick " + to_string(id) + ").");
 			leftChopstick.lock();
 		}
 
 		printLog("Philosopher " + to_string(id) + " is eating.");
 		this_thread::sleep_for(chrono::milliseconds(1000));
 
+		printLog("Philosopher " + to_string(id) + " is putting down left chopstick (chopstick " + to_string(id) + ").");
 		leftChopstick.unlock();
+		printLog("Philosopher " + to_string(id) + " is putting down right chopstick (chopstick " + to_string((id + 1) % NUM_PHILOSOPHERS) + ").");
 		rightChopstick.unlock();
 
 		diningTable.signal();
