@@ -1,6 +1,8 @@
 import socket
 import tkinter as tk
 from tkinter import messagebox
+import threading
+from datetime import datetime
 
 HOST = 'localhost'
 PORT = 12345
@@ -37,6 +39,33 @@ class ChatClient:
         self.pass_entry.pack()
 
         tk.Button(self.login_window, text="Zaloguj", command=self.try_login).pack(pady=10)
+
+    def try_login(self):
+        login = self.login_entry.get().strip()
+        password = self.pass_entry.get().strip()
+
+        if not login or not password:
+            return
+
+        try:
+            self.socket.recv(1024)  # "Login:"
+            self.socket.sendall((login + "\n").encode())
+
+            self.socket.recv(1024)  # "Hasło:"
+            self.socket.sendall((password + "\n").encode())
+
+            response = self.socket.recv(1024).decode()
+
+            if "Zalogowano" in response or "Zarejestrowano" in response:
+                self.username = login
+                self.login_window.destroy()
+                # self.create_chat_ui() - TODO
+                # threading.Thread(target=self.receive_messages, daemon=True).start()
+            else:
+                messagebox.showerror("Błąd logowania", response)
+        except Exception as e:
+            messagebox.showerror("Błąd", f"Coś poszło nie tak:\n{e}")
+            self.master.destroy()
 
 if __name__ == "__main__":
     root = tk.Tk()
