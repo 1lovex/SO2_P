@@ -119,6 +119,42 @@ class ChatClient:
                                  font=("Arial", 12), command=self.send_message)
         send_button.pack(side=tk.RIGHT)
 
+    def append_message(self, msg, sender="system", time="", username=""):
+        message_frame = tk.Frame(self.chat_area, bg=self.msg_area_bg)
+        message_frame.pack(fill=tk.X, pady=5, padx=10)
+        
+        if sender == "me":
+            # Własne wiadomości (po prawej)
+            bubble = tk.Frame(message_frame, bg=self.sent_msg_bg, relief="flat", bd=0)
+            bubble.pack(side=tk.RIGHT, padx=(100, 0))
+            
+        elif sender == "other":
+            # Wiadomości innych (po lewej)
+            bubble = tk.Frame(message_frame, bg=self.received_msg_bg, relief="flat", bd=0)
+            bubble.pack(side=tk.LEFT, padx=(0, 100))
+            
+            # Username i czas
+            if username:
+                username_label = tk.Label(bubble, text=username, bg=self.received_msg_bg,
+                                          fg=self.header_bg, font=("Arial", 9, "bold"))
+                username_label.pack(anchor="w", padx=10, pady=(8, 0))
+                
+        else:
+            # Wiadomości systemowe (środek)
+            bubble = tk.Frame(message_frame, bg=self.msg_area_bg)
+            bubble.pack(anchor="center")
+        
+        # Treść wiadomości
+        msg_label = tk.Label(bubble, text=msg, bg=bubble["bg"], fg=self.text_color, 
+                             font=("Arial", 10), wraplength=400, justify="left")
+        msg_label.pack(anchor="w", padx=10, pady=(5, 5))
+        
+        # Czas wiadomości
+        if time:
+            time_label = tk.Label(bubble, text=time, bg=bubble["bg"], fg=self.secondary_text, 
+                                  font=("Arial", 8))
+            time_label.pack(anchor="e", padx=10, pady=(0, 5))
+
     def send_message(self, event=None):
         msg = self.msg_entry.get().strip()
         if not msg:
