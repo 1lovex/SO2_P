@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import messagebox
 import threading
 from datetime import datetime
+import re
 
 HOST = 'localhost'
 PORT = 12345
@@ -85,7 +86,7 @@ class ChatClient:
         header.pack(fill=tk.X)
         header.pack_propagate(False)
         
-        tk.Label(header, text="💬 Chat Room", bg=self.header_bg, fg="white", 
+        tk.Label(header, text="Chat Room", bg=self.header_bg, fg="white", 
                  font=("Arial", 14, "bold")).pack(side=tk.LEFT, padx=20)
         
         status_label = tk.Label(header, text=f"Zalogowany jako: {self.username}", 
@@ -117,6 +118,40 @@ class ChatClient:
         send_button = tk.Button(input_frame, text="Wyślij", bg=self.header_bg, fg="white", 
                                  font=("Arial", 12), command=self.send_message)
         send_button.pack(side=tk.RIGHT)
+
+    def send_message(self, event=None):
+        msg = self.msg_entry.get().strip()
+        if not msg:
+            return
+
+        czas = datetime.now().strftime("%H:%M")
+        self.append_message(msg, sender="me", time=czas)
+
+        try:
+            self.socket.sendall(msg.encode())
+        except:
+            self.append_message("Błąd wysyłania wiadomości.", sender="system")
+        self.msg_entry.delete(0, tk.END)
+
+    def receive_messages(self):
+        while True:
+            try:
+                message = self.socket.recv(1024).decode().strip()
+                if message:
+                    # Regex do parsowania: [HH:MM:SS] username: message
+                    match = re.match(r'\[(\d{2}:\d{2}:\d{2})\] (.+?): (.+)', message)
+                    if match:
+                        time_str, username, msg_text = match.groups()
+                        time_display = time_str[:5]  # tylko HH:MM
+                        if username != self.username:
+                            self.append_message(msg_text, sender="other", 
+                                            time=time_display, username=username)
+                    else:
+                        # Wszystko co nie pasuje do formatu - traktuje jako system
+                        self.append_message(message, sender="system")
+            except:
+                self.append_message("🔌 Rozłączono z serwerem.", sender="system")
+                break
 
 if __name__ == "__main__":
     root = tk.Tk()
