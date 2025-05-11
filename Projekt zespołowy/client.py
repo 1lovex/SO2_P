@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import messagebox
 import threading
 from datetime import datetime
+import re
 
 HOST = 'localhost'
 PORT = 12345
@@ -85,7 +86,7 @@ class ChatClient:
         header.pack(fill=tk.X)
         header.pack_propagate(False)
         
-        tk.Label(header, text="💬 Chat Room", bg=self.header_bg, fg="white", 
+        tk.Label(header, text="Chat Room", bg=self.header_bg, fg="white", 
                  font=("Arial", 14, "bold")).pack(side=tk.LEFT, padx=20)
         
         status_label = tk.Label(header, text=f"Zalogowany jako: {self.username}", 
@@ -117,6 +118,76 @@ class ChatClient:
         send_button = tk.Button(input_frame, text="Wyślij", bg=self.header_bg, fg="white", 
                                  font=("Arial", 12), command=self.send_message)
         send_button.pack(side=tk.RIGHT)
+
+    def append_message(self, msg, sender="system", time="", username=""):
+        message_frame = tk.Frame(self.chat_area, bg=self.msg_area_bg)
+        message_frame.pack(fill=tk.X, pady=5, padx=10)
+        
+        if sender == "me":
+            # Własne wiadomości (po prawej)
+            bubble = tk.Frame(message_frame, bg=self.sent_msg_bg, relief="flat", bd=0)
+            bubble.pack(side=tk.RIGHT, padx=(100, 0))
+            
+        elif sender == "other":
+            # Wiadomości innych (po lewej)
+            bubble = tk.Frame(message_frame, bg=self.received_msg_bg, relief="flat", bd=0)
+            bubble.pack(side=tk.LEFT, padx=(0, 100))
+            
+            # Username i czas
+            if username:
+                username_label = tk.Label(bubble, text=username, bg=self.received_msg_bg,
+                                          fg=self.header_bg, font=("Arial", 9, "bold"))
+                username_label.pack(anchor="w", padx=10, pady=(8, 0))
+                
+        else:
+            # Wiadomości systemowe (środek)
+            bubble = tk.Frame(message_frame, bg=self.msg_area_bg)
+            bubble.pack(anchor="center")
+        
+        # Treść wiadomości
+        msg_label = tk.Label(bubble, text=msg, bg=bubble["bg"], fg=self.text_color, 
+                             font=("Arial", 10), wraplength=400, justify="left")
+        msg_label.pack(anchor="w", padx=10, pady=(5, 5))
+        
+        # Czas wiadomości
+        if time:
+            time_label = tk.Label(bubble, text=time, bg=bubble["bg"], fg=self.secondary_text, 
+                                  font=("Arial", 8))
+            time_label.pack(anchor="e", padx=10, pady=(0, 5))
+
+    def send_message(self, event=None):
+        msg = self.msg_entry.get().strip()
+        if not msg:
+            return
+
+        czas = datetime.now().strftime("%H:%M")
+        self.append_message(msg, sender="me", time=czas)
+
+        try:
+            self.socket.sendall(msg.encode())
+        except:
+            self.append_message("Błąd wysyłania wiadomości.", sender="system")
+        self.msg_entry.delete(0, tk.END)
+
+    def receive_messages(self):
+        while True:
+            try:
+                message = self.socket.recv(1024).decode().strip()
+                if message:
+                    # Regex do parsowania: [HH:MM:SS] username: message
+                    match = re.match(r'\[(\d{2}:\d{2}:\d{2})\] (.+?): (.+)', message)
+                    if match:
+                        time_str, username, msg_text = match.groups()
+                        time_display = time_str[:5]  # tylko HH:MM
+                        if username != self.username:
+                            self.append_message(msg_text, sender="other", 
+                                            time=time_display, username=username)
+                    else:
+                        # Wszystko co nie pasuje do formatu - traktuje jako system
+                        self.append_message(message, sender="system")
+            except:
+                self.append_message("🔌 Rozłączono z serwerem.", sender="system")
+                break
 
 if __name__ == "__main__":
     root = tk.Tk()
